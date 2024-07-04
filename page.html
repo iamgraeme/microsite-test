@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Embedded Microsite</title>
+    <style>
+      iframe {
+        margin: 20px auto;
+        width: 98%;
+        height: 600px;
+        border: 1px solid #aaa;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Embedding the Microsite</h1>
+    <p>Below is an example of how the microsite can be embedded.</p>
+    <div id="message"></div>
+    <iframe id="microsite"></iframe>
+
+    <script>
+      var eMessage = document.getElementById("message");
+      var eFrame = document.getElementById("microsite");
+
+      window.addEventListener("DOMContentLoaded", activateIframe);
+      window.addEventListener("message", receiveMessage, false);
+
+      function activateIframe() {
+        // this process is only required to support cross-domain use in testing
+        var matches = document.cookie.match(/WLLTOKEN=(.+);?/);
+        if (matches && matches[1]) {
+          eMessage.textContent = "Loading...";
+          fetch("https://example.staging.web.wlloyalty.net/api/auth", {
+            mode: "cors",
+            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${matches[1]}`,
+            },
+          })
+            .then(() => {
+              eMessage.textContent = "Auth complete.";
+              eFrame.src = "https://example.staging.web.wlloyalty.net/";
+            })
+            .catch((error) => {
+              eMessage.textContent = "Auth Error";
+              console.error(error);
+            });
+        } else {
+          eMessage.textContent = "No token provided.";
+        }
+      }
+
+      function receiveMessage(event) {
+        // must check that the message origin is legitimate
+        if (event) {
+          console.info("Received a message from the microsite", event.data);
+        } else {
+          // return immeadiately to prevent further processing.
+          return console.info(
+            "Received a potentially malicious message from an unexpected origin",
+            event.origin
+          );
+        }
+
+        if (event.data.type === "CLAIMED_RECEIPT") {
+          eMessage.textContent = `User completed receipt claim. Current status: ${event.data.body.status}`;
+        }
+      }
+    </script>
+  </body>
+</html>
